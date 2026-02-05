@@ -4,13 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DailyTrack</title>
+    
+    <link rel="icon" type="image/png" href="https://github.com/JNTKV1/daily-track/raw/refs/heads/main/appicon">
+    <link rel="apple-touch-icon" href="https://github.com/JNTKV1/daily-track/raw/refs/heads/main/appicon">
+    <link rel="shortcut icon" sizes="192x192" href="https://github.com/JNTKV1/daily-track/raw/refs/heads/main/appicon">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    
     <style>
         :root { --bg: #020617; --card: #0f172a; --text: #f8fafc; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--bg); color: var(--text); transition: all 0.3s ease; overflow-x: hidden; }
-        
+
         /* State Colors */
         .state-empty { background: #ffffff; color: #000; box-shadow: 0 0 10px rgba(255,255,255,0.1); }
         .state-progress { background: #f59e0b; color: #fff; box-shadow: 0 0 15px rgba(245,158,11,0.3); }
@@ -23,7 +29,7 @@
 
         .streak-badge { animation: pulse 2s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
-        
+
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
     </style>
@@ -268,4 +274,5 @@
 }
     </script>
 </body>
+
 </html>
