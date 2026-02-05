@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DailyTrack</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg: #020617; --card: #0f172a; --text: #f8fafc; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--bg); color: var(--text); transition: all 0.3s ease; overflow-x: hidden; }
+        
+        /* State Colors */
+        .state-empty { background: #ffffff; color: #000; box-shadow: 0 0 10px rgba(255,255,255,0.1); }
+        .state-progress { background: #f59e0b; color: #fff; box-shadow: 0 0 15px rgba(245,158,11,0.3); }
+        .state-complete { background: #22c55e; color: #fff; box-shadow: 0 0 15px rgba(34,197,94,0.3); }
+        .state-failed { background: #ef4444; color: #fff; box-shadow: 0 0 15px rgba(239,68,68,0.3); }
+
+        .day-card { transition: all 0.2s ease; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); }
+        .day-card:hover { transform: scale(1.05); z-index: 10; filter: brightness(1.2); }
+        .active-day { outline: 3px solid #6366f1; outline-offset: 2px; }
+
+        .streak-badge { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+        
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <header class="flex justify-between items-end mb-10">
+            <div>
+                <h1 class="text-4xl font-black italic tracking-tighter">DailyTrack</h1>
+                <p class="text-slate-500 text-[10px] font-bold tracking-[0.4em] uppercase">Commitment Tracker • 2026</p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="toggleTheme()" class="p-3 bg-slate-800 rounded-2xl hover:bg-slate-700 transition-colors">🌓</button>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div class="lg:col-span-8 bg-slate-900/40 rounded-[3rem] p-8 border border-white/5 backdrop-blur-md">
+                <h2 class="text-xl font-bold italic mb-6">The 60-Day Roadmap</h2>
+                <div id="calendar-grid" class="grid grid-cols-4 sm:grid-cols-6 gap-3">
+                    </div>
+            </div>
+
+            <div class="lg:col-span-4 space-y-6">
+                <div class="bg-indigo-600 p-8 rounded-[2.5rem] shadow-2xl text-white relative overflow-hidden">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <h2 id="widget-date" class="text-3xl font-black italic">Feb 5</h2>
+                            <p id="widget-day-name" class="text-[10px] font-bold uppercase opacity-70 tracking-widest">Thursday</p>
+                        </div>
+                        <div id="streak-container" class="hidden flex flex-col items-center streak-badge">
+                            <span class="text-2xl">🔥</span>
+                            <span id="streak-count" class="text-[10px] font-black">STREAK</span>
+                        </div>
+                    </div>
+                    
+                    <div class="w-full bg-black/20 h-4 rounded-full overflow-hidden mb-3">
+                        <div id="widget-bar" class="h-full bg-white transition-all duration-1000 w-0"></div>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <p id="widget-stats" class="text-[10px] font-black uppercase tracking-tighter">0/0 Rituals</p>
+                        <p id="widget-pct" class="text-xs font-mono font-bold">0%</p>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/60 rounded-[3rem] p-8 border border-white/5 shadow-xl min-h-[400px] flex flex-col">
+                    <div class="flex justify-between items-center mb-8">
+                        <h3 class="text-lg font-bold italic uppercase tracking-tighter" id="focus-title">Daily Rituals</h3>
+                        <button onclick="openModal()" class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-indigo-500 transition-all font-bold text-xl">+</button>
+                    </div>
+
+                    <div id="task-list" class="space-y-4 flex-grow overflow-y-auto max-h-[350px] pr-2 custom-scroll">
+                        </div>
+
+                    <div class="mt-8 pt-6 border-t border-white/5">
+                        <p class="text-[9px] font-black uppercase text-indigo-400 mb-2">Motivation</p>
+                        <p id="quote-box" class="text-xs italic text-slate-400 leading-relaxed italic">"Consistency is the only thing that matters."</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal" class="hidden fixed inset-0 bg-black/95 backdrop-blur-xl z-[100] flex items-center justify-center p-6">
+        <div class="bg-slate-900 border border-white/10 w-full max-w-sm p-10 rounded-[3.5rem] shadow-2xl">
+            <h2 class="text-3xl font-black italic mb-8 tracking-tighter uppercase">Add Ritual</h2>
+            <input type="text" id="task-input" placeholder="Task name..." class="w-full bg-slate-800 border border-white/5 p-5 rounded-2xl mb-4 text-white outline-none focus:ring-2 ring-indigo-500">
+            <select id="task-freq" class="w-full bg-slate-800 border border-white/5 p-5 rounded-2xl mb-10 text-white outline-none">
+                <option value="1">Every Day</option>
+                <option value="2">Every 2 Days</option>
+                <option value="7">Once a Week</option>
+            </select>
+            <div class="flex gap-4">
+                <button onclick="closeModal()" class="flex-1 font-bold text-slate-500">Cancel</button>
+                <button onclick="saveTask()" class="flex-[2] bg-white text-black p-5 rounded-2xl font-black uppercase tracking-widest active:scale-95 transition-all">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let tasks = JSON.parse(localStorage.getItem('vb_tasks')) || [];
+        let history = JSON.parse(localStorage.getItem('vb_history')) || {};
+        const todayStr = new Date().toISOString().split('T')[0];
+        let activeDate = todayStr;
+
+        const quotes = [
+            "Action is the foundational key to all success.",
+            "Discipline is choosing between what you want now and what you want most.",
+            "The secret of your future is hidden in your daily routine.",
+            "Make your future self proud."
+        ];
+
+        function toggleTheme() { 
+            const isDark = document.body.style.getPropertyValue('--bg') === '#f1f5f9';
+            if (isDark) {
+                document.documentElement.style.setProperty('--bg', '#020617');
+                document.documentElement.style.setProperty('--card', '#0f172a');
+                document.documentElement.style.setProperty('--text', '#f8fafc');
+            } else {
+                document.documentElement.style.setProperty('--bg', '#f1f5f9');
+                document.documentElement.style.setProperty('--card', '#ffffff');
+                document.documentElement.style.setProperty('--text', '#020617');
+            }
+        }
+
+        function openModal() { document.getElementById('modal').classList.remove('hidden'); }
+        function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+
+        function saveTask() {
+            const name = document.getElementById('task-input').value;
+            const freq = parseInt(document.getElementById('task-freq').value);
+            if (!name) return;
+            tasks.push({ id: Date.now(), name, freq, created: todayStr });
+            localStorage.setItem('vb_tasks', JSON.stringify(tasks));
+            render(); closeModal();
+            document.getElementById('task-input').value = '';
+        }
+
+        function toggleTask(id) {
+            const key = `${activeDate}-${id}`;
+            const was100 = getDayStats(activeDate).pct === 100;
+            history[key] = !history[key];
+            localStorage.setItem('vb_history', JSON.stringify(history));
+            
+            if (getDayStats(activeDate).pct === 100 && !was100) {
+                confetti({ particleCount: 150, spread: 60, origin: { y: 0.7 }, colors: ['#6366f1', '#22c55e', '#ffffff'] });
+            }
+            render();
+        }
+
+        function deleteTask(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            localStorage.setItem('vb_tasks', JSON.stringify(tasks));
+            render();
+        }
+
+        function getDayStats(dateStr) {
+            const dayTasks = tasks.filter(t => {
+                const diff = Math.floor((new Date(dateStr) - new Date(t.created)) / 86400000);
+                return diff >= 0 && diff % t.freq === 0;
+            });
+            if (dayTasks.length === 0) return { status: 'empty', pct: 0, completed: 0, total: 0 };
+            const completed = dayTasks.filter(t => history[`${dateStr}-${t.id}`]).length;
+            const pct = (completed / dayTasks.length) * 100;
+            
+            let status = 'empty';
+            if (pct === 100) status = 'complete';
+            else if (pct > 0) status = 'progress';
+            else if (dateStr < todayStr) status = 'failed';
+            return { status, pct, completed, total: dayTasks.length };
+        }
+
+        function calculateStreak() {
+            let streak = 0;
+            let checkDate = new Date();
+            while (true) {
+                const dStr = checkDate.toISOString().split('T')[0];
+                const stats = getDayStats(dStr);
+                if (stats.total > 0 && stats.pct === 100) {
+                    streak++;
+                    checkDate.setDate(checkDate.getDate() - 1);
+                } else { break; }
+            }
+            return streak;
+        }
+
+        function render() {
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = '';
+            for (let i = -1; i < 59; i++) {
+                const d = new Date();
+                d.setDate(d.getDate() + i);
+                const dStr = d.toISOString().split('T')[0];
+                const stats = getDayStats(dStr);
+                grid.innerHTML += `
+                    <div onclick="activeDate='${dStr}'; render()" class="day-card rounded-2xl p-4 flex flex-col items-center justify-center state-${stats.status} ${activeDate === dStr ? 'active-day' : ''}">
+                        <span class="text-[8px] font-black uppercase opacity-40">${d.toLocaleDateString('en-US', {weekday:'short'})}</span>
+                        <span class="text-base font-black">${d.getDate()}</span>
+                    </div>
+                `;
+            }
+
+            const activeStats = getDayStats(activeDate);
+            const dView = new Date(activeDate + "T12:00:00");
+            
+            document.getElementById('widget-date').innerText = dView.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+            document.getElementById('widget-day-name').innerText = dView.toLocaleDateString('en-US', {weekday: 'long'});
+            document.getElementById('widget-bar').style.width = `${activeStats.pct}%`;
+            document.getElementById('widget-stats').innerText = `${activeStats.completed}/${activeStats.total} Rituals`;
+            document.getElementById('widget-pct').innerText = `${Math.round(activeStats.pct)}%`;
+            
+            const streak = calculateStreak();
+            const streakBox = document.getElementById('streak-container');
+            if (streak >= 3) {
+                streakBox.classList.remove('hidden');
+                document.getElementById('streak-count').innerText = `${streak} DAY STREAK`;
+            } else { streakBox.classList.add('hidden'); }
+
+            const activeTasks = tasks.filter(t => {
+                const diff = Math.floor((new Date(activeDate) - new Date(t.created)) / 86400000);
+                return diff >= 0 && diff % t.freq === 0;
+            });
+
+            document.getElementById('task-list').innerHTML = activeTasks.map(t => `
+                <div onclick="toggleTask(${t.id})" class="p-5 bg-white/5 rounded-[1.5rem] border border-white/5 flex justify-between items-center group cursor-pointer hover:bg-white/10">
+                    <div class="flex items-center gap-4">
+                        <div class="w-6 h-6 rounded-lg border-2 flex items-center justify-center ${history[`${activeDate}-${t.id}`] ? 'bg-green-500 border-green-500' : 'border-slate-700'}">
+                            ${history[`${activeDate}-${t.id}`] ? '✓' : ''}
+                        </div>
+                        <span class="text-sm font-bold ${history[`${activeDate}-${t.id}`] ? 'line-through text-slate-500' : ''}">${t.name}</span>
+                    </div>
+                    <button onclick="event.stopPropagation(); deleteTask(${t.id})" class="text-[9px] font-black opacity-0 group-hover:opacity-100 text-red-400">Remove</button>
+                </div>
+            `).join('') || `<p class="text-center text-slate-600 text-xs py-10">No rituals for this day.</p>`;
+
+            document.getElementById('quote-box').innerText = `"${quotes[Math.floor(Math.random()*quotes.length)]}"`;
+        }
+
+        render();function updateWidgetEndpoint() {
+    const todayStats = getDayStats(todayStr);
+    const dayTasks = tasks.filter(t => {
+        const diff = Math.floor((new Date(todayStr) - new Date(t.created)) / 86400000);
+        return diff >= 0 && diff % t.freq === 0;
+    });
+
+    const widgetPayload = {
+        pct: Math.round(todayStats.pct),
+        color: todayStats.status === 'complete' ? '#22c55e' : (todayStats.status === 'progress' ? '#f59e0b' : '#ef4444'),
+        taskCount: `${todayStats.completed}/${todayStats.total}`
+    };
+
+    // We create a hidden div that KWGT can "scrape" if it fetches the page
+    let bridge = document.getElementById('kwgt-bridge');
+    if (!bridge) {
+        bridge = document.createElement('div');
+        bridge.id = 'kwgt-bridge';
+        bridge.style.display = 'none';
+        document.body.appendChild(bridge);
+    }
+    bridge.innerText = JSON.stringify(widgetPayload);
+}
+    </script>
+</body>
+</html>
